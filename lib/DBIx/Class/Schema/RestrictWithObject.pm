@@ -1,6 +1,6 @@
 package DBIx::Class::Schema::RestrictWithObject;
 
-our $VERSION = '0.0001';
+our $VERSION = '0.0002';
 
 use DBIx::Class::Schema::RestrictWithObject::RestrictComp::Schema;
 use DBIx::Class::Schema::RestrictWithObject::RestrictComp::Source;
@@ -136,10 +136,10 @@ Return an appropriate class name for a restricted class of type $type.
 sub _get_restricted_class {
   my ($self, $type, $target) = @_;
   my $r_class = join('::', $target, '__RestrictedWithObject');
-  unless (eval { $r_class->can('can') }) {
-    my $r_comp = join(
-      '::', 'DBIx::Class::Schema::RestrictWithObject::RestrictComp', $type
-    );
+  my $r_comp = join(
+    '::', 'DBIx::Class::Schema::RestrictWithObject::RestrictComp', $type
+  );
+  unless ($r_class->isa($r_comp)) {
     $self->inject_base($r_class, $r_comp, $target);
   }
   return $r_class;

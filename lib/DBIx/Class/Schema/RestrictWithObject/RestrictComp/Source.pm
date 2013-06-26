@@ -18,21 +18,28 @@ Intercept call to C<resultset> and return restricted resultset
 
 =cut
 
+#TODO:
+# - We should really be caching method name hits to avoid the can()
+#   unless it really is necessary. This would be done at the restrictor
+#   class level. {$source_name} => $restricting_method (undef if n/a)
+
 sub resultset {
   my $self = shift;
   my $rs = $self->next::method(@_);
-  if (my $obj = $self->schema->restricting_object) {
-    my $s = $self->source_name;
-    $s =~ s/::/_/g;
-    my $pre = $self->schema->restricted_prefix;
-    my $meth = "restrict_${s}_resultset";
+  my $obj = $self->schema->restricting_object;
+  return $rs unless $obj;
 
-    #if a prefix was set, try that first
-    if($pre){
-      my $meth_pre = "restrict_${pre}_${s}_resultset";
-      return $obj->$meth_pre($rs) if $obj->can($meth_pre);
+  my $s = $self->source_name;
+  $s =~ s/::/_/g;
+  #if a prefix was set, try that first
+  if(my $pre = $self->schema->restricted_prefix) {
+    if(my $coderef = $obj->can("restrict_${pre}_${s}_resultset")) {
+      return $obj->$coderef($rs);
     }
-    $rs = $obj->$meth($rs) if $obj->can($meth);
+  }
+  #should this be an elsif?!
+  if(my $coderef = $obj->can("restrict_${s}_resultset")) {
+    return $obj->$coderef($rs);
   }
   return $rs;
 }
